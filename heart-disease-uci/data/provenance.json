@@ -1,0 +1,16 @@
+{
+  "dataset": "UCI Heart Disease — processed Cleveland (1988)",
+  "source": "https://archive.ics.uci.edu/dataset/45/heart+disease",
+  "download_url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+  "member": "processed.cleveland.data",
+  "retrieved_utc": "2026-10-31T08:28:44.634350+00:00",
+  "raw_sha256": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+  "csv_sha256": "a5195b7562ca4f48bda400649bfee2a7d7ed70ff72fb5cc0c486c68fd68f7f62",
+  "target": "num",
+  "mapping": {
+    "0": "hastalık yok",
+    "1,2,3,4": "hastalık var"
+  },
+  "rows": 303,
+  "license": "CC BY 4.0"
+}
