@@ -1,14 +1,19 @@
 """Heart Disease UCI için eğitim amaçlı Streamlit arayüzü."""
 from pathlib import Path
+import sys
 
 import joblib
 import pandas as pd
 import streamlit as st
 
+BASE = Path(__file__).resolve().parent
+if str(BASE) not in sys.path:
+    sys.path.insert(0, str(BASE))
+
 from train import FEATURES
 
-BASE = Path(__file__).resolve().parent
 MODEL_PATH = BASE / "artifacts" / "heart_pipeline.joblib"
+RANGES_PATH = BASE / "artifacts" / "training_ranges.csv"
 
 CATEGORIES = {
     "sex": {
@@ -70,10 +75,13 @@ NUMERIC_FIELDS = {
 
 @st.cache_resource
 def load_pipeline():
-    if not MODEL_PATH.is_file():
-        raise FileNotFoundError(
-            f"Model bulunamadı: {MODEL_PATH}. Önce proje klasöründe `python train.py` çalıştırın."
+    missing = [path.name for path in (MODEL_PATH, RANGES_PATH) if not path.is_file()]
+    if missing:
+        st.error(
+            f"Gerekli eğitim çıktıları bulunamadı: {', '.join(missing)}. "
+            "Proje kök klasöründe `python train.py` çalıştırıp uygulamayı yeniden başlatın."
         )
+        st.stop()
     return joblib.load(MODEL_PATH)
 
 
@@ -89,6 +97,10 @@ st.markdown(
 )
 
 pipeline = load_pipeline()
+ranges = pd.read_csv(RANGES_PATH, index_col=0)
+with st.expander("Eğitim verisindeki özellik aralıkları"):
+    st.dataframe(ranges.rename(columns={"min": "Eğitim min.", "max": "Eğitim maks."}))
+    st.caption("Aralıklar yalnızca eğitim kümesinden hesaplanır; klinik sınır veya güvenli kullanım aralığı değildir.")
 values = {}
 for feature in FEATURES:
     if feature in CATEGORIES:

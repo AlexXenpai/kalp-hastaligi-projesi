@@ -22,9 +22,12 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate
+from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
-                             classification_report, confusion_matrix, ConfusionMatrixDisplay)
+                             fbeta_score, make_scorer, classification_report,
+                             confusion_matrix, ConfusionMatrixDisplay,
+                             precision_recall_curve, roc_curve, roc_auc_score,
+                             average_precision_score)
 
 BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
@@ -34,6 +37,7 @@ COLUMNS = 'age sex cp trestbps chol fbs restecg thalach exang oldpeak slope ca t
 NUMERIC = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'ca']
 CATEGORICAL = ['sex', 'cp', 'fbs', 'restecg', 'exang', 'slope', 'thal']
 FEATURES = COLUMNS[:-1]
+assert 'num' not in FEATURES and 'disease' not in FEATURES
 LABELS = {0: 'Hayır — hastalık yok', 1: 'Evet — hastalık var'}
 SOURCE = 'https://archive.ics.uci.edu/dataset/45/heart+disease'
 DOWNLOAD = 'https://archive.ics.uci.edu/static/public/45/heart+disease.zip'
@@ -42,6 +46,14 @@ CSV_SHA256 = 'a5195b7562ca4f48bda400649bfee2a7d7ed70ff72fb5cc0c486c68fd68f7f62'
 CP = {1: 'Tipik anjina', 2: 'Atipik anjina', 3: 'Anjina dışı ağrı', 4: 'Belirtisiz'}
 CATEGORY_VALUES = {'sex': [0, 1], 'cp': [1, 2, 3, 4], 'fbs': [0, 1],
                    'restecg': [0, 1, 2], 'exang': [0, 1], 'slope': [1, 2, 3], 'thal': [3, 6, 7]}
+BASELINE = {
+    'description': 'İlk değerlendirme; önceki çalışmada görülen test bölümü',
+    'train_cv': {'accuracy': 0.847024, 'precision': 0.878326,
+                 'recall': 0.783794, 'f1': 0.825353},
+    'holdout': {'accuracy': 53 / 61, 'precision': 26 / 32,
+                'recall': 26 / 28, 'f1': 0.866667},
+    'confusion_matrix': [[27, 6], [2, 26]],
+}
 # oldpeak için UCI belgesi birim vermiyor: mV/mm varsaymıyoruz.
 DICTIONARY = [
     ('age', 'Yaş', 'yıl', 'Sayısal'),
@@ -113,7 +125,9 @@ def clean_data(raw):
              'removed_id_columns': ids, 'exact_duplicates_removed': duplicates,
              'missing_counts': raw.isna().sum().astype(int).to_dict(),
              'question_marks': int((pd.read_csv(DATA / 'heart_cleveland.csv', dtype=str, keep_default_na=False) == '?').sum().sum()),
-             'original_target_counts': df.num.value_counts().sort_index().astype(int).to_dict()}
+             'original_target_counts': df.num.value_counts().sort_index().astype(int).to_dict(),
+             'category_counts': {col: df[col].value_counts(dropna=False).sort_index().astype(int).to_dict()
+                                 for col in CATEGORY_VALUES}}
     return df, audit
 
 
@@ -139,31 +153,66 @@ def make_pipeline(model):
 
 
 def compare_models(X_train, y_train):
-    """Sabit modeller, eşik 0.5; test bu fonksiyona hiç verilmez."""
-    models = {
-        'Logistic Regression': LogisticRegression(max_iter=2000, random_state=42),
-        'Decision Tree': DecisionTreeClassifier(max_depth=4, min_samples_leaf=5, random_state=42),
-        'Random Forest': RandomForestClassifier(n_estimators=300, min_samples_leaf=2, random_state=42, n_jobs=1),
+    """5x3 nested CV: her dış fold yalnızca iç CV'de ayarlanan modeli ölçer."""
+    grids = {
+        'Logistic Regression': (
+            LogisticRegression(max_iter=3000, random_state=42),
+            {'model__C': [0.1, 1.0, 10.0], 'model__class_weight': [None, 'balanced']}),
+        'Decision Tree': (
+            DecisionTreeClassifier(random_state=42),
+            {'model__max_depth': [None, 3, 5], 'model__min_samples_leaf': [2, 5, 10],
+             'model__class_weight': [None, 'balanced']}),
+        'Random Forest': (
+            RandomForestClassifier(n_estimators=150, random_state=42, n_jobs=1),
+            {'model__max_depth': [None, 5, 10], 'model__min_samples_leaf': [2, 5],
+             'model__max_features': ['sqrt', 0.8], 'model__class_weight': [None, 'balanced']}),
     }
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    rows, pipelines = [], {}
-    for name, model in models.items():
-        pipe = make_pipeline(model)
-        # Her fold içinde imputer/encoder/scaler yeniden yalnızca o fold'un eğitimine fit edilir.
-        scores = cross_validate(pipe, X_train, y_train, cv=cv,
-                                scoring=['accuracy', 'precision', 'recall', 'f1'], error_score='raise', n_jobs=1)
+    scorers = {'accuracy': 'accuracy', 'precision': 'precision', 'recall': 'recall',
+               'f1': 'f1', 'f2': make_scorer(fbeta_score, beta=2, zero_division=0)}
+    outer = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    results = {name: [] for name in grids}
+    fold_rows = []
+    for fold, (fit_idx, validation_idx) in enumerate(outer.split(X_train, y_train), start=1):
+        X_fit, X_validation = X_train.iloc[fit_idx], X_train.iloc[validation_idx]
+        y_fit, y_validation = y_train.iloc[fit_idx], y_train.iloc[validation_idx]
+        inner = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+        for name, (estimator, params) in grids.items():
+            search = GridSearchCV(make_pipeline(estimator), params, scoring=scorers['f2'], cv=inner,
+                                  n_jobs=1, refit=True, error_score='raise')
+            search.fit(X_fit, y_fit)
+            predictions = search.predict(X_validation)
+            values = {
+                'accuracy': accuracy_score(y_validation, predictions),
+                'precision': precision_score(y_validation, predictions, zero_division=0),
+                'recall': recall_score(y_validation, predictions, zero_division=0),
+                'f1': f1_score(y_validation, predictions, zero_division=0),
+                'f2': fbeta_score(y_validation, predictions, beta=2, zero_division=0),
+            }
+            results[name].append(values)
+            fold_rows.append({'model': name, 'outer_fold': fold, **values,
+                              'inner_best_f2': float(search.best_score_)})
+    summaries = []
+    for name, rows in results.items():
         row = {'model': name}
-        for metric in ['accuracy', 'precision', 'recall', 'f1']:
-            row[f'{metric}_mean'] = float(scores[f'test_{metric}'].mean())
-            row[f'{metric}_std'] = float(scores[f'test_{metric}'].std(ddof=1))
-        rows.append(row)
-        pipelines[name] = pipe
-    # Önceden sabit karar: en yüksek ortalama pozitif recall; eşitse precision, sonra F1.
-    table = pd.DataFrame(rows).sort_values(['recall_mean', 'precision_mean', 'f1_mean'],
-                                         ascending=False, kind='stable').reset_index(drop=True)
-    winner = table.iloc[0]['model']
-    selected = pipelines[winner].fit(X_train, y_train)
-    return table, winner, selected
+        for metric in scorers:
+            values = [item[metric] for item in rows]
+            row[f'{metric}_mean'] = float(np.mean(values))
+            row[f'{metric}_std'] = float(np.std(values, ddof=1))
+        summaries.append(row)
+    summary = pd.DataFrame(summaries).sort_values(
+        ['f2_mean', 'precision_mean', 'recall_mean'], ascending=False, kind='stable'
+    ).reset_index(drop=True)
+    return summary, pd.DataFrame(fold_rows), grids, scorers
+
+
+def fit_final_model(grid, scorer, X_train, y_train):
+    """Model ailesi outer-CV ile seçildikten sonra tüm eğitim verisinde yeniden ayarla."""
+    estimator, params = grid
+    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    search = GridSearchCV(make_pipeline(estimator), params, scoring=scorer, cv=cv,
+                          n_jobs=1, refit=True, error_score='raise')
+    search.fit(X_train, y_train)
+    return search.best_estimator_, search.best_params_, float(search.best_score_)
 
 
 def error_analysis(X_test, y_test, predictions, probabilities, X_train):
@@ -191,18 +240,60 @@ def error_analysis(X_test, y_test, predictions, probabilities, X_train):
 
 
 def evaluate_final(pipe, X_test, y_test, X_train):
-    """Seçim bittiğinde tek son test değerlendirmesi; testle eşik ayarlanmaz."""
+    """Seçim bittiğinde mevcut holdout'u bir kez ölç; eşik 0.5 olarak sabittir."""
     probabilities = pipe.predict_proba(X_test)[:, list(pipe.classes_).index(1)]
     predictions = (probabilities >= 0.5).astype(int)
     metrics = {'accuracy': float(accuracy_score(y_test, predictions)),
                'precision': float(precision_score(y_test, predictions, zero_division=0)),
                'recall': float(recall_score(y_test, predictions, zero_division=0)),
-               'f1': float(f1_score(y_test, predictions, zero_division=0))}
+               'f1': float(f1_score(y_test, predictions, zero_division=0)),
+               'f2': float(fbeta_score(y_test, predictions, beta=2, zero_division=0)),
+               'roc_auc': float(roc_auc_score(y_test, probabilities)),
+               'average_precision': float(average_precision_score(y_test, probabilities))}
     report = classification_report(y_test, predictions, labels=[0, 1],
                                    target_names=[LABELS[0], LABELS[1]], zero_division=0)
     matrix = confusion_matrix(y_test, predictions, labels=[0, 1])
     errors = error_analysis(X_test, y_test, predictions, probabilities, X_train)
     return metrics, report, matrix, errors
+
+
+def draw_model_comparison(table):
+    metrics = ['accuracy', 'precision', 'recall', 'f1', 'f2']
+    fig, axes = plt.subplots(1, len(metrics), figsize=(17, 5), sharey=True)
+    for ax, metric in zip(axes, metrics):
+        ax.bar(table['model'], table[f'{metric}_mean'],
+               yerr=table[f'{metric}_std'], capsize=4, color='#247b98')
+        ax.set(title=metric.upper(), ylim=(0, 1), ylabel='Outer-CV score' if metric == 'accuracy' else '')
+        ax.tick_params(axis='x', labelrotation=35)
+    fig.suptitle('Nested CV model comparison — mean ± standard deviation (5 outer folds)')
+    fig.tight_layout()
+    fig.savefig(REPORTS / 'figures' / 'nested_cv_comparison.png', dpi=140, bbox_inches='tight')
+    return fig
+
+
+def save_final_curves(y_test, pipe, X_test):
+    probabilities = pipe.predict_proba(X_test)[:, list(pipe.classes_).index(1)]
+    precision, recall, _ = precision_recall_curve(y_test, probabilities, pos_label=1)
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.plot(recall, precision, label=f"AP = {average_precision_score(y_test, probabilities):.3f}")
+    ax.set(xlabel='Recall (pozitif: hastalık var)', ylabel='Precision',
+           title='Mevcut holdout üzerinde Precision–Recall eğrisi', xlim=(0, 1), ylim=(0, 1.02))
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(REPORTS / 'figures' / 'precision_recall.png', dpi=140)
+    plt.close(fig)
+
+    false_positive, true_positive, _ = roc_curve(y_test, probabilities, pos_label=1)
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.plot(false_positive, true_positive,
+            label=f"ROC AUC = {roc_auc_score(y_test, probabilities):.3f}")
+    ax.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Rastgele referans')
+    ax.set(xlabel='False positive rate', ylabel='True positive rate',
+           title='Mevcut holdout üzerinde ROC eğrisi', xlim=(0, 1), ylim=(0, 1.02))
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(REPORTS / 'figures' / 'roc.png', dpi=140)
+    plt.close(fig)
 
 
 def draw_plot(kind, train_df):
@@ -256,18 +347,37 @@ def draw_plot(kind, train_df):
     return fig, comment
 
 
-def save_results(pipe, table, winner, metrics, report, matrix, errors, audit, X_train, X_test, y_train, y_test):
-    REPORTS.mkdir(exist_ok=True)
+def save_results(pipe, table, fold_scores, winner, best_params, inner_best_f2, metrics,
+                 report, matrix, errors, audit, X_train, X_test, y_train, y_test):
+    REPORTS.mkdir(parents=True, exist_ok=True)
     ARTIFACTS.mkdir(exist_ok=True)
     joblib.dump(pipe, ARTIFACTS / 'heart_pipeline.joblib')
     table.to_csv(REPORTS / 'cv_results.csv', index=False)
+    fold_scores.to_csv(REPORTS / 'nested_cv_fold_scores.csv', index=False)
     errors.to_csv(REPORTS / 'misclassified_examples.csv', index=False)
     (REPORTS / 'classification_report.txt').write_text(report, encoding='utf-8')
     pd.DataFrame(matrix, index=['gerçek_hayır', 'gerçek_evet'],
                  columns=['tahmin_hayır', 'tahmin_evet']).to_csv(REPORTS / 'confusion_matrix.csv')
-    result = {'selected_model': winner, 'positive_class': '1 = hastalık var', 'threshold': 0.5,
-              'selection_rule': 'Eğitim 5-fold CV recall; eşitlikte precision, sonra F1',
+    comparison = [
+        {'değerlendirme': 'İlk değerlendirme — eğitim 5-kat CV',
+         **BASELINE['train_cv']},
+        {'değerlendirme': 'Geliştirilmiş değerlendirme — nested CV, dış kat ortalaması',
+         **{f'{key}': float(table.loc[table.model == winner, f'{key}_mean'].iloc[0])
+            for key in ['accuracy', 'precision', 'recall', 'f1', 'f2']}},
+        {'değerlendirme': 'İlk değerlendirme — mevcut holdout; önceki çalışmada görülmüştür',
+         **BASELINE['holdout']},
+        {'değerlendirme': 'Geliştirilmiş değerlendirme — mevcut holdout üzerinde yeniden değerlendirme',
+         **metrics},
+    ]
+    pd.DataFrame(comparison).to_csv(REPORTS / 'baseline_vs_improved.csv', index=False)
+    result = {'selected_model': winner, 'best_params': best_params,
+              'final_inner_cv_best_f2': inner_best_f2,
+              'positive_class': '1 = hastalık var', 'threshold': 0.5,
+              'selection_rule': 'Outer nested-CV mean F2; tie-break precision, then recall. F2 weights recall twice as much as precision without making precision irrelevant.',
+              'nested_cv_summary': table.to_dict(orient='records'),
+              'test_evaluation_label': 'Mevcut holdout üzerinde yeniden değerlendirme; önceki çalışmada görüldüğünden bağımsız dış doğrulama değildir.',
               'test_metrics': metrics, 'confusion_matrix': matrix.tolist(), 'audit': audit,
+              'first_evaluation_baseline': BASELINE,
               'train_size': len(X_train), 'test_size': len(X_test), 'random_state': 42,
               'python': platform.python_version(), 'sklearn': sklearn.__version__,
               'pandas': pd.__version__, 'numpy': np.__version__,
@@ -290,24 +400,32 @@ def run():
     print('Temizleme denetimi:', audit)
     print(class_table(df.disease).to_string(index=False))
     X_train, X_test, y_train, y_test = split_data(df)
-    cv, winner, pipe = compare_models(X_train, y_train)
-    print('\nEğitim çapraz doğrulama:\n', cv.to_string(index=False))
-    print('Seçilen model:', winner)
+    cv, fold_scores, grids, scorers = compare_models(X_train, y_train)
+    winner = cv.iloc[0]['model']
+    pipe, best_params, inner_best_f2 = fit_final_model(grids[winner], scorers['f2'], X_train, y_train)
+    print('\nNested CV outer-fold özeti (tarafsız performans tahmini):\n', cv.to_string(index=False))
+    print('Seçilen model ailesi:', winner, '| Son parametreler:', best_params)
     metrics, report, matrix, errors = evaluate_final(pipe, X_test, y_test, X_train)
-    result = save_results(pipe, cv, winner, metrics, report, matrix, errors, audit, X_train, X_test, y_train, y_test)
+    (REPORTS / 'figures').mkdir(parents=True, exist_ok=True)
+    result = save_results(pipe, cv, fold_scores, winner, best_params, inner_best_f2,
+                          metrics, report, matrix, errors, audit,
+                          X_train, X_test, y_train, y_test)
     for kind in ['hedef', 'yas', 'cinsiyet', 'agri', 'nabiz', 'korelasyon']:
         fig, comment = draw_plot(kind, X_train.assign(disease=y_train))
         plt.close(fig)
         print(kind, ':', comment)
     pd.DataFrame({'grafik': ['hedef', 'yas', 'cinsiyet', 'agri', 'nabiz', 'korelasyon'],
                   'yorum': [draw_comment(k, X_train.assign(disease=y_train)) for k in ['hedef', 'yas', 'cinsiyet', 'agri', 'nabiz', 'korelasyon']]}).to_csv(REPORTS / 'graph_comments.csv', index=False)
+    fig = draw_model_comparison(cv)
+    plt.close(fig)
+    save_final_curves(y_test, pipe, X_test)
     fig, ax = plt.subplots(figsize=(6, 5))
     ConfusionMatrixDisplay(matrix, display_labels=['Hayır', 'Evet']).plot(ax=ax, colorbar=False)
     ax.set(xlabel='Tahmin', ylabel='Gerçek etiket', title='Son test: hata matrisi (pozitif = hastalık var)')
     fig.tight_layout()
     fig.savefig(REPORTS / 'figures' / 'confusion_matrix.png', dpi=140)
     plt.close(fig)
-    print('\nSon test:', metrics, '\n', report)
+    print('\nMevcut holdout üzerinde yeniden değerlendirme (bağımsız dış doğrulama değildir):', metrics, '\n', report)
     print(errors.to_string(index=False))
     return result
 
