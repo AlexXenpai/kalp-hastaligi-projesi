@@ -71,3 +71,50 @@ Uygulama model veya eğitim aralıkları bulunmazsa `python train.py` çalışt�
 | İlk değerlendirme — eğitim CV | 0.847024 | 0.878326 | 0.783794 | 0.825353 | — | Önceki 5-kat CV; yeni nested CV ile aynı protokol değil |
 | Geliştirilmiş — eğitim nested CV | Çalıştırınca kaydedilir | Çalıştırınca kaydedilir | Çalıştırınca kaydedilir | Çalıştırınca kaydedilir | Çalıştırınca kaydedilir | 5 dış kat ortalaması; standart sapmalar `cv_results.csv` içinde |
 | İlk değerlendir
+
+
+## Uygulamada sonuç karşılaştırma
+
+- **Toplu karşılaştırma → Tüm veriyi karşılaştır:** Kayıtlı modelle 303 kaydın tamamı yeniden tahmin edilir. Gerçek etiket, model tahmini, doğru/yanlış durumu, hata türü ve 13 girdi birlikte gösterilir. Yeniden eğitim yapılmaz.
+- **Veri grubu** ve **Gösterilecek sonuçlar** filtreleriyle test/eğitim kayıtlarını, yanlış tahminleri, hastalığın kaçırıldığı kayıtları veya yanlış alarmları inceleyebilirsiniz.
+- Test özeti filtrelerden bağımsız kalır. Eğitim ve tüm veri doğruluğu ayrı tabloda verilir; bu değerler yeni verideki başarı olarak yorumlanmamalıdır. Mevcut test kümesi daha önce de kullanılmıştır; bağımsız dış doğrulama değildir.
+- Görünen kayıtlar veya tüm sonuçlar Türkçe karakterleri koruyan CSV dosyası olarak indirilebilir. CSV satırı, kaynak dosyadaki başlık dahil satır numarasıdır.
+- **Tek kayıt tahmini:** Gerçek sonucu biliyorsanız seçin ve **Tahmin et** düğmesine basın. Sonuç bilinmiyorsa uygulama doğruluk iddiasında bulunmaz. Gerçek etiket modele girdi olarak verilmez.
+- Karşılaştırma öncesinde veri/model dosyaları rapordaki özetlerle, eğitim/test ayrımı da kayıtlarla doğrulanır. Windows ve Linux satır sonu farkları kabul edilir.
+
+Kontrol komutu (projenin paketlerinin kurulu olduğu Python ortamında):
+
+```bash
+python tests/test_comparison.py
+```
+
+
+## Yeni SVM modeli ve yeniden üretme
+
+Aktif model, `experiments/search_20261104_124112` deneyinde eğitim verisinde seçilen RBF SVM'dir (`C=1`, `gamma=0.01`). Sabit 242 eğitim / 61 test ayrımı ve 13 girdi korunmuştur; hedef girdi olarak kullanılmaz. Ön işleme her CV katının yalnızca eğitim kısmında öğrenilir.
+
+- 37 aday ayarı, 3 iç / 5 dış katlı nested CV ile karşılaştırıldı. İç seçim accuracy, eşitlikte recall ile yapılır. Tüm eğitim verisinde son seçim tamamlandıktan sonra mevcut test bir kez değerlendirildi.
+- Model seçme sürecinin dış kat accuracy ortalaması **%85,13**, katlar arası standart sapması **2,65 yüzde puan**; recall ortalaması **%76,48**. Bu, testteki yüksek skorun her yeni veride garanti olmadığını gösterir.
+- Mevcut testte önceki model **52/61 (%85,25)**, yeni model **56/61 (%91,80)** doğru tahmin yaptı. Yeni modelde 30 doğru negatif, 26 doğru pozitif, 3 yanlış pozitif ve 2 yanlış negatif vardır.
+- Test kümesi önceki çalışmalarda kullanılmıştır. Etkinleştirme kararı da test karşılaştırmasını kullandı; sonuç bağımsız dış doğrulama değildir.
+- Sınıf kararı `Pipeline.predict` ile verilir. SVC olasılık skoru ayrı hesaplandığından %50 olasılık eşiğiyle sınıf kararı her zaman aynı olmayabilir.
+- Eski model ve raporların yedeği: `backups/before_model_20261104_124340`. Deney protokolü, tüm ayarların eğitim skorları, dış kat sonuçları, aday model ve test karşılaştırması deney klasöründedir.
+
+Yeni araştırmayı başlatmak için:
+
+```bash
+python improve_model.py
+```
+
+Bu komut aktif modeli değiştirmez. Çıktıdaki deney klasörünü kullanarak, önceden belirlenen iyileştirme koşullarını sağlayan adayı etkinleştirebilirsiniz:
+
+```bash
+python activate_model.py experiments/search_YYYYMMDD_HHMMSS
+```
+
+`train.py` eski eğitim yöntemini çalıştırır ve aktif modelin üzerine yazabilir. Yeni SVM araştırması için `improve_model.py` kullanın. Tekrar tekrar aynı test kümesine göre geliştirme yapmak bağımsız doğrulama sağlamaz.
+
+
+### Test kaydı seçerek tek tek inceleme
+
+**Tek kayıt tahmini** ekranında **Kendin gir** veya **61 test kaydından seç** seçeneğini kullanın. Listeden seçilen test kaydının 13 özelliği, gerçek sonucu, model tahmini ve doğru/yanlış karşılaştırması otomatik gösterilir. CSV satır numarası toplu karşılaştırmadaki kayıtla aynıdır. Kayıtlı değerler değiştirilmez; eksikler modelin mevcut ön işleme adımına bırakılır. Toplam veri 303 kayıttır; seçim listesi yalnızca 61 test kaydını içerir.

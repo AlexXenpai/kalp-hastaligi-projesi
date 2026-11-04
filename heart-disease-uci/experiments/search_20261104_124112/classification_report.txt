@@ -1,0 +1,8 @@
+              precision    recall  f1-score   support
+
+Hastalık yok       0.94      0.91      0.92        33
+Hastalık var       0.90      0.93      0.91        28
+
+    accuracy                           0.92        61
+   macro avg       0.92      0.92      0.92        61
+weighted avg       0.92      0.92      0.92        61

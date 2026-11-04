@@ -1,72 +1,31 @@
 {
-  "selected_model": "Logistic Regression",
+  "selected_model": "SVC",
   "best_params": {
-    "model__C": 10.0,
-    "model__class_weight": null
+    "model": "SVC(probability=True, random_state=42)",
+    "model__C": 1,
+    "model__gamma": 0.01
   },
-  "final_inner_cv_best_f2": 0.8090620795538829,
   "positive_class": "1 = hastalık var",
-  "threshold": 0.5,
-  "selection_rule": "Outer nested-CV mean F2; tie-break precision, then recall. F2 weights recall twice as much as precision without making precision irrelevant.",
-  "nested_cv_summary": [
-    {
-      "model": "Logistic Regression",
-      "accuracy_mean": 0.8470238095238095,
-      "accuracy_std": 0.019356681597034624,
-      "precision_mean": 0.8566714346361675,
-      "precision_std": 0.0641765976977244,
-      "recall_mean": 0.8098814229249012,
-      "recall_std": 0.06889272504815896,
-      "f1_mean": 0.8288266545328371,
-      "f1_std": 0.021049744690805873,
-      "f2_mean": 0.8165253355898262,
-      "f2_std": 0.047337956165950754
-    },
-    {
-      "model": "Random Forest",
-      "accuracy_mean": 0.8055272108843539,
-      "accuracy_std": 0.03318043119311089,
-      "precision_mean": 0.7893550543024226,
-      "precision_std": 0.04750989130675188,
-      "recall_mean": 0.791699604743083,
-      "recall_std": 0.08399325737395918,
-      "f1_mean": 0.7875772495648191,
-      "f1_std": 0.04131706226347044,
-      "f2_mean": 0.7893202496810756,
-      "f2_std": 0.06444691809810295
-    },
-    {
-      "model": "Decision Tree",
-      "accuracy_mean": 0.7353741496598639,
-      "accuracy_std": 0.10076467823220661,
-      "precision_mean": 0.7153915957001257,
-      "precision_std": 0.11959744922544428,
-      "recall_mean": 0.7379446640316205,
-      "recall_std": 0.08335142778240402,
-      "f1_mean": 0.7219537655995591,
-      "f1_std": 0.08569900491209209,
-      "f2_mean": 0.7303101948476571,
-      "f2_std": 0.0790936479514707
-    }
-  ],
-  "test_evaluation_label": "Mevcut holdout üzerinde yeniden değerlendirme; önceki çalışmada görüldüğünden bağımsız dış doğrulama değildir.",
+  "threshold": null,
+  "selection_rule": "Eğitimde 3 katlı CV accuracy; eşitlikte recall.",
+  "test_evaluation_label": "Mevcut ve daha önce kullanılmış test kümesi; bağımsız dış doğrulama değildir.",
   "test_metrics": {
-    "accuracy": 0.8524590163934426,
-    "precision": 0.8064516129032258,
-    "recall": 0.8928571428571429,
-    "f1": 0.847457627118644,
-    "f2": 0.8741258741258742,
-    "roc_auc": 0.9534632034632036,
-    "average_precision": 0.9328604430077901
+    "accuracy": 0.9180327868852459,
+    "precision": 0.896551724137931,
+    "recall": 0.9285714285714286,
+    "f1": 0.9122807017543859,
+    "f2": 0.9219858156028369,
+    "roc_auc": 0.9632034632034633,
+    "average_precision": 0.9555937757082281
   },
   "confusion_matrix": [
     [
-      27,
-      6
+      30,
+      3
     ],
     [
-      3,
-      25
+      2,
+      26
     ]
   ],
   "audit": {
@@ -169,10 +128,64 @@
   "train_size": 242,
   "test_size": 61,
   "random_state": 42,
-  "python": "3.13.14",
+  "python": "3.10.6",
   "sklearn": "1.6.1",
   "pandas": "2.2.3",
-  "numpy": "2.4.3",
+  "numpy": "2.2.6",
   "data_sha256": "a5195b7562ca4f48bda400649bfee2a7d7ed70ff72fb5cc0c486c68fd68f7f62",
-  "model_sha256": "e048e83e26ac9aab815644ae57a6c5f579612421b3aa98411097a114cc7cfff2"
+  "model_sha256": "3918cbf8645b88e5d8927e99ee187f29dfca83a031a786a89a7f5df538b40649",
+  "decision_rule": "Pipeline.predict; SVC karar fonksiyonu eşiği 0. predict_proba sınıf kararıyla her zaman aynı olmayabilir.",
+  "model_improvement": {
+    "selection": "Eğitimde 3 katlı CV accuracy; eşitlikte recall.",
+    "assessment": "Tüm model seçme süreci eğitimde 5 dış katlı nested CV ile ölçülür.",
+    "split_seed": 42,
+    "train_size": 242,
+    "test_size": 61,
+    "target_accuracy": 0.9,
+    "data_sha256": "a5195b7562ca4f48bda400649bfee2a7d7ed70ff72fb5cc0c486c68fd68f7f62",
+    "baseline_model_sha256": "e048e83e26ac9aab815644ae57a6c5f579612421b3aa98411097a114cc7cfff2",
+    "test_note": "Mevcut ve daha önce kullanılmış test kümesi; bağımsız dış doğrulama değildir.",
+    "promotion_rule": "Adayın nested CV accuracy değeri referans CV değerinden düşük olmayacak; mevcut test accuracy artacak ve hastalık kaçırma sayısı artmayacak. Teste bağlı bu kullanım kararı nedeniyle test bağımsız doğrulama değildir.",
+    "selected_model": "SVC",
+    "best_params": {
+      "model": "SVC(probability=True, random_state=42)",
+      "model__C": 1,
+      "model__gamma": 0.01
+    },
+    "nested_cv_accuracy_mean": 0.8512755102040815,
+    "nested_cv_accuracy_std": 0.026480962612905577,
+    "nested_cv_recall_mean": 0.7648221343873518,
+    "baseline_cv_accuracy_mean": 0.8510204081632653,
+    "baseline_cv_note": "Referansın hiperparametreleri önceki çalışmada eğitim verisinden seçilmişti; referans CV bütünüyle bağımsız bir model seçimi tahmini değildir.",
+    "test_metrics": {
+      "accuracy": 0.9180327868852459,
+      "precision": 0.896551724137931,
+      "recall": 0.9285714285714286,
+      "f1": 0.9122807017543859,
+      "f2": 0.9219858156028369,
+      "roc_auc": 0.9632034632034633,
+      "average_precision": 0.9555937757082281
+    },
+    "baseline_test_metrics": {
+      "accuracy": 0.8524590163934426,
+      "recall": 0.8928571428571429,
+      "precision": 0.8064516129032258,
+      "f1": 0.847457627118644
+    },
+    "confusion_matrix": [
+      [
+        30,
+        3
+      ],
+      [
+        2,
+        26
+      ]
+    ],
+    "model_sha256": "3918cbf8645b88e5d8927e99ee187f29dfca83a031a786a89a7f5df538b40649",
+    "exceeds_90_on_existing_test": true,
+    "eligible_for_promotion": true
+  },
+  "experiment_directory": "experiments/search_20261104_124112",
+  "previous_model_backup": "backups/before_model_20261104_124340"
 }

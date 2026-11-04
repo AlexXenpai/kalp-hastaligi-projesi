@@ -1,0 +1,12 @@
+{
+  "selection": "Eğitimde 3 katlı CV accuracy; eşitlikte recall.",
+  "assessment": "Tüm model seçme süreci eğitimde 5 dış katlı nested CV ile ölçülür.",
+  "split_seed": 42,
+  "train_size": 242,
+  "test_size": 61,
+  "target_accuracy": 0.9,
+  "data_sha256": "a5195b7562ca4f48bda400649bfee2a7d7ed70ff72fb5cc0c486c68fd68f7f62",
+  "baseline_model_sha256": "e048e83e26ac9aab815644ae57a6c5f579612421b3aa98411097a114cc7cfff2",
+  "test_note": "Mevcut ve daha önce kullanılmış test kümesi; bağımsız dış doğrulama değildir.",
+  "promotion_rule": "Adayın nested CV accuracy değeri referans CV değerinden düşük olmayacak; mevcut test accuracy artacak ve hastalık kaçırma sayısı artmayacak. Teste bağlı bu kullanım kararı nedeniyle test bağımsız doğrulama değildir."
+}

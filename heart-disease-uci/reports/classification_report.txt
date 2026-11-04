@@ -1,8 +1,8 @@
-                      precision    recall  f1-score   support
+              precision    recall  f1-score   support
 
-Hayır — hastalık yok       0.90      0.82      0.86        33
- Evet — hastalık var       0.81      0.89      0.85        28
+Hastalık yok       0.94      0.91      0.92        33
+Hastalık var       0.90      0.93      0.91        28
 
-            accuracy                           0.85        61
-           macro avg       0.85      0.86      0.85        61
-        weighted avg       0.86      0.85      0.85        61
+    accuracy                           0.92        61
+   macro avg       0.92      0.92      0.92        61
+weighted avg       0.92      0.92      0.92        61

@@ -1,0 +1,7 @@
+grafik,yorum
+hedef,Hayır: 131 (%54.1); evet: 111 (%45.9). Sınıflar tam eşit değildir; accuracy tek başına yeterli değildir.
+yas,"Medyan yaş hastalık yok grubunda 52.0, hastalık var grubunda 58.0. Yaş dağılımları örtüşür; yaş tek başına bir tanı ölçütü değildir."
+cinsiyet,Kadın: %23.4 (n=77); Erkek: %56.4 (n=165). Bunlar bu örneklemdeki oranlardır; grupların büyüklükleri farklıdır ve neden-sonuç göstermez.
+agri,Tipik anjina: %31.6 (n=19); Atipik anjina: %16.7 (n=42); Anjina dışı ağrı: %23.4 (n=64); Belirtisiz: %70.9 (n=117). Bunlar bu örneklemdeki oranlardır; grupların büyüklükleri farklıdır ve neden-sonuç göstermez.
+nabiz,"Maksimum kalp hızı medyanı hayır grubunda 161.0, evet grubunda 142.0 atım/dakika. Bu fark tek bir kişide güvenilir tanı sağlamaz ve nedensellik göstermez."
+korelasyon,Hedefle mutlak Pearson korelasyonu en yüksek sayısal özellik Damar sayısı (r=0.45). Kategorik kodlar ısı haritasına alınmadı. Eksikler çiftler bazında dışlandı; korelasyon nedensellik veya doğrusal olmayan tüm ilişkiler değildir.

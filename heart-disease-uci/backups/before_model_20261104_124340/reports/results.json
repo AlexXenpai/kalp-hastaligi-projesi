@@ -1,0 +1,178 @@
+{
+  "selected_model": "Logistic Regression",
+  "best_params": {
+    "model__C": 10.0,
+    "model__class_weight": null
+  },
+  "final_inner_cv_best_f2": 0.8090620795538829,
+  "positive_class": "1 = hastalık var",
+  "threshold": 0.5,
+  "selection_rule": "Outer nested-CV mean F2; tie-break precision, then recall. F2 weights recall twice as much as precision without making precision irrelevant.",
+  "nested_cv_summary": [
+    {
+      "model": "Logistic Regression",
+      "accuracy_mean": 0.8470238095238095,
+      "accuracy_std": 0.019356681597034624,
+      "precision_mean": 0.8566714346361675,
+      "precision_std": 0.0641765976977244,
+      "recall_mean": 0.8098814229249012,
+      "recall_std": 0.06889272504815896,
+      "f1_mean": 0.8288266545328371,
+      "f1_std": 0.021049744690805873,
+      "f2_mean": 0.8165253355898262,
+      "f2_std": 0.047337956165950754
+    },
+    {
+      "model": "Random Forest",
+      "accuracy_mean": 0.8055272108843539,
+      "accuracy_std": 0.03318043119311089,
+      "precision_mean": 0.7893550543024226,
+      "precision_std": 0.04750989130675188,
+      "recall_mean": 0.791699604743083,
+      "recall_std": 0.08399325737395918,
+      "f1_mean": 0.7875772495648191,
+      "f1_std": 0.04131706226347044,
+      "f2_mean": 0.7893202496810756,
+      "f2_std": 0.06444691809810295
+    },
+    {
+      "model": "Decision Tree",
+      "accuracy_mean": 0.7353741496598639,
+      "accuracy_std": 0.10076467823220661,
+      "precision_mean": 0.7153915957001257,
+      "precision_std": 0.11959744922544428,
+      "recall_mean": 0.7379446640316205,
+      "recall_std": 0.08335142778240402,
+      "f1_mean": 0.7219537655995591,
+      "f1_std": 0.08569900491209209,
+      "f2_mean": 0.7303101948476571,
+      "f2_std": 0.0790936479514707
+    }
+  ],
+  "test_evaluation_label": "Mevcut holdout üzerinde yeniden değerlendirme; önceki çalışmada görüldüğünden bağımsız dış doğrulama değildir.",
+  "test_metrics": {
+    "accuracy": 0.8524590163934426,
+    "precision": 0.8064516129032258,
+    "recall": 0.8928571428571429,
+    "f1": 0.847457627118644,
+    "f2": 0.8741258741258742,
+    "roc_auc": 0.9534632034632036,
+    "average_precision": 0.9328604430077901
+  },
+  "confusion_matrix": [
+    [
+      27,
+      6
+    ],
+    [
+      3,
+      25
+    ]
+  ],
+  "audit": {
+    "raw_shape": [
+      303,
+      14
+    ],
+    "clean_shape": [
+      303,
+      15
+    ],
+    "removed_id_columns": [],
+    "exact_duplicates_removed": 0,
+    "missing_counts": {
+      "age": 0,
+      "sex": 0,
+      "cp": 0,
+      "trestbps": 0,
+      "chol": 0,
+      "fbs": 0,
+      "restecg": 0,
+      "thalach": 0,
+      "exang": 0,
+      "oldpeak": 0,
+      "slope": 0,
+      "ca": 4,
+      "thal": 2,
+      "num": 0
+    },
+    "question_marks": 6,
+    "original_target_counts": {
+      "0": 164,
+      "1": 55,
+      "2": 36,
+      "3": 35,
+      "4": 13
+    },
+    "category_counts": {
+      "sex": {
+        "0.0": 97,
+        "1.0": 206
+      },
+      "cp": {
+        "1.0": 23,
+        "2.0": 50,
+        "3.0": 86,
+        "4.0": 144
+      },
+      "fbs": {
+        "0.0": 258,
+        "1.0": 45
+      },
+      "restecg": {
+        "0.0": 151,
+        "1.0": 4,
+        "2.0": 148
+      },
+      "exang": {
+        "0.0": 204,
+        "1.0": 99
+      },
+      "slope": {
+        "1.0": 142,
+        "2.0": 140,
+        "3.0": 21
+      },
+      "thal": {
+        "3.0": 166,
+        "6.0": 18,
+        "7.0": 117,
+        "NaN": 2
+      }
+    }
+  },
+  "first_evaluation_baseline": {
+    "description": "İlk değerlendirme; önceki çalışmada görülen test bölümü",
+    "train_cv": {
+      "accuracy": 0.847024,
+      "precision": 0.878326,
+      "recall": 0.783794,
+      "f1": 0.825353
+    },
+    "holdout": {
+      "accuracy": 0.8688524590163934,
+      "precision": 0.8125,
+      "recall": 0.9285714285714286,
+      "f1": 0.866667
+    },
+    "confusion_matrix": [
+      [
+        27,
+        6
+      ],
+      [
+        2,
+        26
+      ]
+    ]
+  },
+  "train_size": 242,
+  "test_size": 61,
+  "random_state": 42,
+  "python": "3.13.14",
+  "sklearn": "1.6.1",
+  "pandas": "2.2.3",
+  "numpy": "2.4.3",
+  "data_sha256": "a5195b7562ca4f48bda400649bfee2a7d7ed70ff72fb5cc0c486c68fd68f7f62",
+  "model_sha256": "e048e83e26ac9aab815644ae57a6c5f579612421b3aa98411097a114cc7cfff2"
+}
