@@ -7,6 +7,8 @@ import platform
 import urllib.request
 import zipfile
 
+from schema import COLUMNS, FEATURES
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -33,10 +35,8 @@ BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
 REPORTS = BASE / 'reports'
 ARTIFACTS = BASE / 'artifacts'
-COLUMNS = 'age sex cp trestbps chol fbs restecg thalach exang oldpeak slope ca thal num'.split()
 NUMERIC = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'ca']
 CATEGORICAL = ['sex', 'cp', 'fbs', 'restecg', 'exang', 'slope', 'thal']
-FEATURES = COLUMNS[:-1]
 assert 'num' not in FEATURES and 'disease' not in FEATURES
 LABELS = {0: 'Hayır — hastalık yok', 1: 'Evet — hastalık var'}
 SOURCE = 'https://archive.ics.uci.edu/dataset/45/heart+disease'

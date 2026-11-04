@@ -5,10 +5,8 @@ import json
 
 import pandas as pd
 
-from train import FEATURES, clean_data, split_data
-
-
-LABELS = {0: "Hastalık yok", 1: "Hastalık var"}
+from schema import FEATURES, LABELS
+from train import clean_data, split_data
 
 
 def evaluate_dataset(pipeline, base):

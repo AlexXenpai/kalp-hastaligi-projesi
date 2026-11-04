@@ -12,8 +12,7 @@ BASE = Path(__file__).resolve().parent
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
-from train import FEATURES
-from comparison import LABELS, evaluate_dataset, filter_results, summarize
+from schema import FEATURES, LABELS
 
 MODEL_PATH = BASE / "artifacts" / "heart_pipeline.joblib"
 RANGES_PATH = BASE / "artifacts" / "training_ranges.csv"
@@ -133,6 +132,8 @@ with bulk_tab:
     if st.session_state.get("comparison_signature") != signature:
         st.session_state.pop("comparison_results", None)
     if st.button("Tüm veriyi karşılaştır", type="primary", key="compare_all"):
+        from comparison import evaluate_dataset
+
         try:
             with st.spinner("Kayıtlar karşılaştırılıyor..."):
                 st.session_state["comparison_results"] = evaluate_dataset(pipeline, BASE)
@@ -141,6 +142,8 @@ with bulk_tab:
             st.session_state.pop("comparison_results", None)
             st.error(f"Karşılaştırma yapılamadı: {exc}")
     if "comparison_results" in st.session_state:
+        from comparison import filter_results, summarize
+
         results = st.session_state["comparison_results"]
         test_results = results[results["Küme"] == "Test"]
         stats = summarize(test_results)
@@ -206,6 +209,8 @@ with single_tab:
             submitted = st.form_submit_button("Tahmin et", type="primary")
     else:
         st.caption("Toplam 303 kayıt içinden test için ayrılmış 61 kayıt listelenir. Seçtiğin kaydın gerçek sonucu ve model karşılaştırması otomatik gösterilir.")
+        from comparison import evaluate_dataset
+
         try:
             if "comparison_results" not in st.session_state:
                 st.session_state["comparison_results"] = evaluate_dataset(pipeline, BASE)
